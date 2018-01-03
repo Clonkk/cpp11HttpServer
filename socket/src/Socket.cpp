@@ -120,18 +120,20 @@ int Socket::getSocketErrno() {
 }
 // Connect socket
 int Socket::connect() {
-  // printf("_sockfd = %i \"%s\" \n", _sockfd, __PRETTY_FUNCTION__);
-  struct sockaddr_in s_in;
-  memset(&s_in,0,sizeof(s_in));
-  s_in.sin_family = AF_INET;
-  s_in.sin_port = this->sockInet.getInPort();
-  s_in.sin_addr = this->sockInet.getInAddr();
-  // memcpy(&s_in, sockInet.getSaddrIn_p(), sizeof(sockInet.getSaddrIn()));
-  if(::connect(this->_sockfd, reinterpret_cast<struct sockaddr*>(&s_in), sizeof(s_in)) == -1) {
-    handleError(__PRETTY_FUNCTION__);
-    return errno;
+  if(!_hasConnected) {
+    // printf("_sockfd = %i \"%s\" \n", _sockfd, __PRETTY_FUNCTION__);
+    struct sockaddr_in s_in;
+    memset(&s_in,0,sizeof(s_in));
+    s_in.sin_family = AF_INET;
+    s_in.sin_port = this->sockInet.getInPort();
+    s_in.sin_addr = this->sockInet.getInAddr();
+    // memcpy(&s_in, sockInet.getSaddrIn_p(), sizeof(sockInet.getSaddrIn()));
+    if(::connect(this->_sockfd, reinterpret_cast<struct sockaddr*>(&s_in), sizeof(s_in)) == -1) {
+      handleError(__PRETTY_FUNCTION__);
+      return errno;
+    }
+    _hasConnected = true;
   }
-  _hasConnected = true;
   return 0;
 }
 // Close socket
@@ -142,17 +144,7 @@ void Socket::close() {
     listenThread.join();
   }
   _listening = false;
-  if(_sockfd >= 0) {
-    getSocketErrno(); // first clear any errors, which can cause close to fail
-    if (::shutdown(_sockfd, SHUT_RDWR) <= -1) {// secondly, terminate the 'reliable' delivery
-      if (errno != ENOTCONN && errno != EINVAL) {// SGI causes EINVAL
-        handleError(__PRETTY_FUNCTION__);
-      }
-      if (::close(_sockfd) <= -1) {// finally call close()
-        handleError(__PRETTY_FUNCTION__);
-      }
-    }
-  }
+
 }
 // Read the socket
 int Socket::recv(void* buffer, size_t maxSize) {
@@ -191,9 +183,6 @@ int Socket::send(const void* data, size_t maxSize) {
   return length;
 }
 void Socket::open(std::function<void(Socket*)> msgHandler) {
-  if(!_hasConnected) {
-    this->connect();
-  }
   if(!_listening) {
     messageHandler = msgHandler;
     _msgRecv = true;
@@ -229,7 +218,7 @@ void Socket::listenImpl() {
   struct pollfd fds;
   fds.fd = _sockfd;
   fds.events = POLLIN;
-  int timeout = (500); // 1 sec
+  int timeout = (500); // 0.5 sec
   int rc = 0;
   do {
     rc = poll(&fds, 1, timeout);
@@ -246,5 +235,16 @@ void Socket::listenImpl() {
       // Error case
     }
   } while(_msgRecv);
+  if(_sockfd >= 0) {
+    getSocketErrno(); // first clear any errors, which can cause close to fail
+    if (::shutdown(_sockfd, SHUT_RDWR) <= -1) {// secondly, terminate the 'reliable' delivery
+      if (errno != ENOTCONN && errno != EINVAL) {// SGI causes EINVAL
+        handleError(__PRETTY_FUNCTION__);
+      }
+      if (::close(_sockfd) <= -1) {// finally call close()
+        handleError(__PRETTY_FUNCTION__);
+      }
+    }
+  }
   // printf("_sockfd = %i \"%s\" -- END -- \n", _sockfd, __PRETTY_FUNCTION__);
 }

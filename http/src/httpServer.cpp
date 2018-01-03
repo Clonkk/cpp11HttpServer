@@ -38,7 +38,7 @@ void httpServer::open(std::function<void(Socket*)> func) {
   Server::open(localRequestHandler);
 }
 void httpServer::requestHandler(Socket* s) {
-  httpSock* socket = reinterpret_cast<httpSock*>(s);
+  httpSock* socket = dynamic_cast<httpSock*>(s);
   char buffer[4096];
   int length;
   length = socket->recv(buffer, 4096);

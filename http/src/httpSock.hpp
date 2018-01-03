@@ -39,6 +39,7 @@ class httpSock:public Socket {
     //
     httpServer* server;
     volatile bool isWs;
+    volatile unsigned int _opCode;
     std::function<std::string(const std::string& msg)> webSocketMessageHandler;
 		std::string encodeWsMessage(const std::string& rawMsg);
 		std::string decodeWsMessage(const std::string& rawMsg);

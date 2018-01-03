@@ -72,29 +72,30 @@ Server::~Server() {
 }
 // Bind socket
 int Server::bind() {
-  struct sockaddr_in s_in;
-  memset(&s_in,0,sizeof(s_in));
-  s_in.sin_family = AF_INET;
-  s_in.sin_port = this->sockInet.getInPort();
-  s_in.sin_addr = this->sockInet.getInAddr();
-  int rc = ::bind(this->_sockfd, reinterpret_cast<struct sockaddr*>(&s_in), sizeof(s_in));
-  if(rc == -1) {
-    handleError(__PRETTY_FUNCTION__);
-    return errno;
-  } else {
-    rc = ::listen(_sockfd, MAX_CLIENT);
-    if (rc < 0) {
-      ::close(_sockfd);
-      handleError("listen() failed");
+  if(!_hasConnected) {
+    struct sockaddr_in s_in;
+    memset(&s_in,0,sizeof(s_in));
+    s_in.sin_family = AF_INET;
+    s_in.sin_port = this->sockInet.getInPort();
+    s_in.sin_addr = this->sockInet.getInAddr();
+    int rc = ::bind(this->_sockfd, reinterpret_cast<struct sockaddr*>(&s_in), sizeof(s_in));
+    if(rc == -1) {
+      handleError(__PRETTY_FUNCTION__);
+      return errno;
+    } else {
+      rc = ::listen(_sockfd, MAX_CLIENT);
+      if (rc < 0) {
+        ::close(_sockfd);
+        handleError("listen() failed");
+      }
+      _hasConnected = true;
+      return 0;
     }
-    _hasConnected = true;
+  } else {
     return 0;
   }
 }
 void Server::open(std::function<void(Socket* sock)> func) {
-  if(!_hasConnected) {
-    this->bind();
-  }
   if(!_listening) {
     messageHandler =  func;
     _msgRecv = true;
@@ -140,6 +141,17 @@ void Server::listenImpl() {
       fds.revents = 0;
     }
   } while(_msgRecv);
+  if(_sockfd >= 0) {
+    getSocketErrno(); // first clear any errors, which can cause close to fail
+    if (::shutdown(_sockfd, SHUT_RDWR) <= -1) {// secondly, terminate the 'reliable' delivery
+      if (errno != ENOTCONN && errno != EINVAL) {// SGI causes EINVAL
+        handleError(__PRETTY_FUNCTION__);
+      }
+      if (::close(_sockfd) <= -1) {// finally call close()
+        handleError(__PRETTY_FUNCTION__);
+      }
+    }
+  }
   // printf("_sockfd = %i \"%s\" -- END -- \n", _sockfd, __PRETTY_FUNCTION__);
 }
 void Server::handleIncoming(int new_sockfd, const Inet& inet) {
