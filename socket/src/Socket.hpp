@@ -33,38 +33,39 @@ class Socket;
 extern void defaultMsgHandler(Socket* sock);
 
 class Socket {
-	public:
-		Socket();
-		Socket(uint16_t port, const char* ip);
-		Socket(int sd, uint16_t port, const char* ip);
-		Socket(const Inet& inet);
-		Socket(int sd, const Inet& inet);
-		virtual ~Socket();
-		// return errno
-		virtual void close();
+  public:
+    Socket();
+    Socket(uint16_t port, const char* ip);
+    Socket(int sd, uint16_t port, const char* ip);
+    Socket(const Inet& inet);
+    Socket(int sd, const Inet& inet);
+    virtual ~Socket();
+    // return errno
+    virtual void close();
     virtual void open(std::function<void(Socket* sock)> sock = defaultMsgHandler);
-		virtual int connect();
-		// return number of byte read / peek
-		virtual int recv(void* buffer, size_t size);
-		virtual int peek(void* buffer, size_t size);
-		virtual int send(const void* buffer, size_t size);
-		//Clear and get any error
-		int getSocketErrno();
-		// Wait for data 
-		virtual void listen(std::function<void(Socket* sock)> func); 
-		virtual void listen(); 
-	protected:
+    virtual int connect();
+    // return number of byte read / peek
+    virtual int recv(void* buffer, size_t size);
+    virtual int peek(void* buffer, size_t size);
+    virtual int send(const void* buffer, size_t size);
+    //Clear and get any error
+    int getSocketErrno();
+    // Wait for data 
+    virtual void listen(std::function<void(Socket* sock)> func); 
+    virtual void listen(); 
+  protected:
     // socket parameter
-		int _sockfd;
-		Inet sockInet;
+    int _sockfd;
+    Inet sockInet;
     // Callback func & thread
-		std::function<void(Socket* sock)> messageHandler;
+    std::function<void(Socket* sock)> messageHandler;
     std::thread listenThread;
     //Boolean falg
-		volatile bool _listening;
-		volatile bool _msgRecv;
+    volatile bool _listening;
+    volatile bool _msgRecv;
     volatile bool _hasConnected;
     //
     virtual void waitListening();
-		virtual void listenImpl();
+    virtual void listenImpl();
+    friend class Server;
 };

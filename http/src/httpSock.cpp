@@ -26,6 +26,9 @@
 #include "httpRes.hpp"
 #include <vector>
 
+std::string defaultWs(const std::string& m) {
+  return "";
+}
 httpSock::httpSock(int fd, const Inet& inet, httpServer* serv_):Socket(fd, inet) {
   server = serv_;
   isWs = false;
@@ -35,8 +38,9 @@ httpSock::~httpSock() {
 bool httpSock::isWebSocket() {
   return isWs;
 }
-void httpSock::upgradeToWs(std::function<std::string(const std::string&)> func) {
+void httpSock::upgradeToWs(const std::string& topic, std::function<std::string(const std::string&)> func) {
   isWs = true;
+  webSocketResName = topic;
   webSocketMessageHandler = func;
 }
 // #include <iostream>
@@ -90,6 +94,9 @@ std::string httpSock::encodeWsMessage(const std::string& rawMsg) {
   // encodedMsg += rawMsg;
   return encodedMsg;
 }
+void httpSock::send(const std::string& res) {
+  Socket::send(res.c_str(), res.size());
+}
 void httpSock::handleWebSocketMessage(const std::string& rawMsg) {
   // Decode message
   // Execute callback
@@ -104,9 +111,10 @@ void httpSock::handleWebSocketMessage(const std::string& rawMsg) {
   if(_opCode == 0x88) {
     printf("Closing after receving opcode 0x88\n");
     _msgRecv = false;
+    server->removeWs(webSocketResName);
     return;
   }
-  Socket::send(res.c_str(), res.size());
+  send(res);
 }
 /*
  * Reminder of a websocket frame according to RFC6455
@@ -147,7 +155,7 @@ std::string httpSock::decodeWsMessage(const std::string& encodedMsg) {
     // Close socket
     _opCode = 0x88;
   } else {
-    // Handle bad casd 
+    // Handle bad case
     return("");
   }
   for(unsigned int i=1;i<encodedMsg.size(); ++i){

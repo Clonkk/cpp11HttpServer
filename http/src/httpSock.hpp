@@ -26,21 +26,24 @@
 class httpReq;
 class httpRes;
 class httpServer;
-
+extern std::string defaultWs(const std::string& m);
 class httpSock:public Socket {
   public:
     httpSock(int fd, const Inet& inet, httpServer* serv);
     virtual ~httpSock();
     bool isWebSocket();
-    void upgradeToWs(std::function<std::string(const std::string&)> func);
+    void upgradeToWs(const std::string& topic, std::function<std::string(const std::string&)> func = defaultWs);
     void send(httpRes& res);
-		void handleWebSocketMessage(const std::string& rawMsg);
+    void send(const std::string& msg);
+    void handleWebSocketMessage(const std::string& rawMsg);
   private:
     //
     httpServer* server;
     volatile bool isWs;
+    std::string webSocketResName;
     volatile unsigned int _opCode;
     std::function<std::string(const std::string& msg)> webSocketMessageHandler;
-		std::string encodeWsMessage(const std::string& rawMsg);
-		std::string decodeWsMessage(const std::string& rawMsg);
+    std::string encodeWsMessage(const std::string& rawMsg);
+    std::string decodeWsMessage(const std::string& rawMsg);
+    friend class httpServer;
 };

@@ -36,7 +36,7 @@
  * INADDR_LOOPBACK (127.0.0.1)
  * INADDR_ANY (0.0.0.0)
  * INADDR_BROADCAST (255.255.255.255)
-*/
+ */
 class Inet {
   public:
     //Default

@@ -26,7 +26,7 @@
 #include "httpRes.hpp"
 #include <cstring>
 void defaultHttpServerFunction(Socket*) {}
-
+#include <vector>
 httpServer::httpServer(uint16_t port, const char* ip):Server(port, ip) {
 }
 httpServer::httpServer(const Inet& inet) : Server(inet) {
@@ -76,18 +76,23 @@ void httpServer::httpRequestHandler(httpSock* socket, const std::string& strReq)
     // send res
   } else {
     if(req.header("Method") == "GET" && req.header("Connection") == "Upgrade" && req.header("Upgrade") == "websocket") {
+      // if(checkWsRessource(req.header("Ressource"))) {
+      // Websocket case
+      res.setHttpCode(http::SWITCHING_PROTOCOLS);
+      res.handleWsResponse(req);
+      socket->send(res);
       if(checkWsRessource(req.header("Ressource"))) {
-        // Websocket case
-        res.setHttpCode(http::SWITCHING_PROTOCOLS);
-        res.handleWsResponse(req);
-        socket->send(res);
-        socket->upgradeToWs(wsCallMap[req.header("Ressource")]); 
+        socket->upgradeToWs(req.header("Ressource"), wsCallMap[req.header("Ressource")]); 
       } else {
-        // Ressource no found
-        res.setHttpCode(http::NOT_FOUND);
-        socket->send(res);
+        socket->upgradeToWs(req.header("Ressource")); 
       }
-    }else {
+      webSocketMap.emplace(req.header("Ressource"), socket->sockInet);
+      // } else {
+      //   // Ressource no found
+      //   res.setHttpCode(http::NOT_FOUND);
+      //   socket->send(res);
+      // }
+    } else {
       res.setHeader("Content-Length", std::to_string(req.getBody().size()));
       res.setHeader(std::string("Access-Control-Allow-Origin"),std::string("*"));
       res.setHeader("Content-Type", "text/plain");
@@ -101,6 +106,12 @@ void httpServer::httpRequestHandler(httpSock* socket, const std::string& strReq)
         // Execute http callack
         executeHttpCallback(req, res);
         socket->send(res);
+        // TODO : handle lua ressources
+        // ressource can be path to lua script or lua function
+        // Execute lua script
+        // Script should return a string
+        // std::string luaRetValue = ...
+        // res.setContent(luaRetValue);
       } else {
         // Ressource no found
         res.setHttpCode(http::NOT_FOUND);
@@ -144,4 +155,30 @@ void httpServer::addRestFunction(const std::string& method, const std::string& p
 void httpServer::executeHttpCallback(httpReq& req, httpRes& res) {
   std::string ressourceKey = req.header("Method")+" "+req.header("Ressource");
   httpCallMap[ressourceKey](req, res);
+}
+void httpServer::sendWsMsg(const std::string& topic, const std::string& msg) {
+  try {
+    Inet localInet = webSocketMap.at(topic);
+    httpSock& socket = dynamic_cast<httpSock&>(*Server::socketStorage.at(localInet));
+    std::string encodedMsg = socket.encodeWsMessage(msg);
+    socket.send(encodedMsg);
+  } catch(std::out_of_range &e) {
+    // Ignore message sent
+    // std::cerr << e.what() << std::endl;
+    // std::cerr << "No websocket on topic : " << topic  << std::endl;
+  }
+}
+void httpServer::sendWsMsg(const std::string& msg) {
+  std::string encodedMsg;
+  // Broadcast message to all ws
+  for(auto it=webSocketMap.begin();it!=webSocketMap.end();++it) {
+    httpSock& socket = dynamic_cast<httpSock&>(*Server::socketStorage.at(it->second));
+    encodedMsg = socket.encodeWsMessage(msg);
+    socket.send(encodedMsg);
+  }
+}
+void httpServer::removeWs(const std::string& topic) {
+  if(webSocketMap.count(topic) > 0) {
+    webSocketMap.erase(topic);
+  }
 }
