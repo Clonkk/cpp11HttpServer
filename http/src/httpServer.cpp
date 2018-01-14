@@ -76,24 +76,22 @@ void httpServer::httpRequestHandler(httpSock* socket, const std::string& strReq)
     // send res
   } else {
     if(req.header("Method") == "GET" && req.header("Connection") == "Upgrade" && req.header("Upgrade") == "websocket") {
-      // if(checkWsRessource(req.header("Ressource"))) {
       // Websocket case
       res.setHttpCode(http::SWITCHING_PROTOCOLS);
       res.handleWsResponse(req);
       socket->send(res);
+      // A websocket can have no callback
+      // In which case a default empty ws callback is provided
       if(checkWsRessource(req.header("Ressource"))) {
         socket->upgradeToWs(req.header("Ressource"), wsCallMap[req.header("Ressource")]); 
       } else {
         socket->upgradeToWs(req.header("Ressource")); 
       }
       webSocketMap.emplace(req.header("Ressource"), socket->sockInet);
-      // } else {
-      //   // Ressource no found
-      //   res.setHttpCode(http::NOT_FOUND);
-      //   socket->send(res);
-      // }
     } else {
       res.setHeader("Content-Length", std::to_string(req.getBody().size()));
+      // This should be configured elsewhere probably...
+      // Maybe redo the origin filtering in httpSock using CORS instead
       res.setHeader(std::string("Access-Control-Allow-Origin"),std::string("*"));
       res.setHeader("Content-Type", "text/plain");
       if(req.header("Connection")=="keep-alive") {
@@ -106,12 +104,6 @@ void httpServer::httpRequestHandler(httpSock* socket, const std::string& strReq)
         // Execute http callack
         executeHttpCallback(req, res);
         socket->send(res);
-        // TODO : handle lua ressources
-        // ressource can be path to lua script or lua function
-        // Execute lua script
-        // Script should return a string
-        // std::string luaRetValue = ...
-        // res.setContent(luaRetValue);
       } else {
         // Ressource no found
         res.setHttpCode(http::NOT_FOUND);
@@ -121,7 +113,7 @@ void httpServer::httpRequestHandler(httpSock* socket, const std::string& strReq)
   }
 }
 bool httpServer::checkRestRessource(const std::string& method, const std::string& ressource) {
-  if(httpCallMap.count(ressource) > 0) {
+  if(httpCallMap.count(std::string(method+"/"+ressource)) > 0) {
     return true;
   } else {
     return false;
@@ -145,15 +137,15 @@ void httpServer::addWsFunction(const std::string& path, wsCallback func) {
   wsCallMap[path] = func;
 }
 void httpServer::addRestFunction(const std::string& path, httpCallback func) {
-  std::string fullRessource = "GET "+path; 
+  std::string fullRessource = "GET/"+path; 
   httpCallMap[fullRessource] = func;
 }
 void httpServer::addRestFunction(const std::string& method, const std::string& path, httpCallback func) {
-  std::string fullRessource = method+" "+path; 
+  std::string fullRessource = method+"/"+path; 
   httpCallMap[fullRessource] = func;
 }
 void httpServer::executeHttpCallback(httpReq& req, httpRes& res) {
-  std::string ressourceKey = req.header("Method")+" "+req.header("Ressource");
+  std::string ressourceKey = req.header("Method")+"/"+req.header("Ressource");
   httpCallMap[ressourceKey](req, res);
 }
 void httpServer::sendWsMsg(const std::string& topic, const std::string& msg) {

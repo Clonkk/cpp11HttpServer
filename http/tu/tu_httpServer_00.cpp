@@ -6,17 +6,22 @@ volatile bool goOn = true;
 void sighandler(int theSignal) {
   goOn = false;
 }
-// const char* const IP = "192.168.1.12";
-const char* const IP = "127.0.0.1"; 
+const char* const IP = "192.168.1.12";
+// const char* const IP = "127.0.0.1"; 
 const uint16_t PORT = 10175;
-
-void echoFunc(httpReq& req, httpRes& res) {
-    res.setContent(req.parameter("msg"));
-    std::cout << req.parameter("msg") << std::endl;
+void printFunc(httpReq& req, httpRes& res) {
+  req.print();
 }
-std::string echoWs(const std::string& msg) {
-    std::cout << "WebsocketServer says... " << msg << std::endl;
-    return msg;
+void echoFunc(httpReq& req, httpRes& res) {
+  auto params = req.parameter("msg");
+  std::string content;
+  while(!params.empty()) {
+    content += params.front()+" ";
+    params.pop();
+  }
+  res.setHeader("Content-Type", "text/plain");
+  std::cout << content << std::endl;
+  res.setContent(content);
 }
 int main() {
   struct sigaction action;
@@ -29,7 +34,7 @@ int main() {
   httpServer server(PORT, IP);
   server.bind();
   server.addRestFunction("echo",echoFunc);
-  server.addWsFunction("echo",echoWs);
+  server.addRestFunction("",printFunc);
   server.open();
   while(goOn);
   server.close();

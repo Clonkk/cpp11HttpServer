@@ -21,7 +21,6 @@
  *
  */
 #include "httpReq.hpp"
-#include <vector>
 #include <iostream>
 //
 httpReq::httpReq() {}
@@ -43,10 +42,10 @@ void httpReq::print() {
       std::cout << it.first << " : " << it.second << std::endl;
   }
   std::cout << std::endl;
-  std::cout << "________________________________" << std::endl;
+  // std::cout << "________________________________" << std::endl;
   if(!body.empty()) {
     std::cout << body << std::endl;
-    std::cout << "________________________________" << std::endl;
+    // std::cout << "________________________________" << std::endl;
   }
 }
 //
@@ -58,12 +57,19 @@ std::string httpReq::header(const std::string h) {
   }
 }
 //
-std::string httpReq::parameter(const std::string h) {
+std::string httpReq::getBody() {
+  return body;
+}
+//
+std::queue<std::string> httpReq::parameter(const std::string h) {
+  std::queue<std::string> queue;
   if(params.count(h)>0) {
-    return params[h];
-  } else {
-    return std::string("");
+    auto range = params.equal_range(h);
+    for(auto it=range.first; it!=range.second;++it) {
+      queue.emplace(it->second);
+    }
   }
+  return queue;
 }
 //
 http::Code httpReq::process(const std::string& buffer) {
@@ -117,8 +123,7 @@ void httpReq::addMultiValueParameters(const std::string& field, const std::strin
     std::string localValue = value.substr(0, multiValuePos);
     params.insert(std::make_pair(field, localValue));
     value = value.substr(multiValuePos+multiValueSep.size());
-    // Forbid multiple value of same parameters ?
-    // addMultiValueParameters(field, value);
+    addMultiValueParameters(field, value);
   }
 }
 //

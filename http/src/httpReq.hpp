@@ -24,6 +24,7 @@
 #include <string>
 #include "httpValue.hpp"
 #include <unordered_map>
+#include <queue>
 
 class httpReq {
   public:
@@ -31,11 +32,9 @@ class httpReq {
     ~httpReq();
     // Map of http header 
     std::string header(const std::string);
-    std::string parameter(const std::string);
+    std::queue<std::string> parameter(const std::string);
     // Print conf
-    std::string getBody() {
-      return body;
-    }
+    std::string getBody();
     void print();
     // Process request
     http::Code process(const std::string& buffer);
@@ -50,7 +49,7 @@ class httpReq {
     void addMultiValueParameters(const std::string& field, const std::string& values);
     // Local map
     std::unordered_map<std::string, std::string> headers;
-    std::map<std::string, std::string> params;
-    // std::multimap<std::string, std::string> params;
+    // std::map<std::string, std::string> params;
+    std::multimap<std::string, std::string> params;
     std::string body;
 };
