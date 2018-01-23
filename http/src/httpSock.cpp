@@ -29,6 +29,7 @@
 std::string defaultWs(const std::string& m) {
   return "";
 }
+
 httpSock::httpSock(int fd, const Inet& inet, httpServer* serv_):Socket(fd, inet) {
   server = serv_;
   isWs = false;
@@ -45,6 +46,11 @@ void httpSock::upgradeToWs(const std::string& topic, std::function<std::string(c
 }
 // #include <iostream>
 void httpSock::send(httpRes& res) {
+  // This should be configured elsewhere probably...
+  // Maybe redo the origin filtering in httpSock using CORS instead
+  if(res.header("Content-Type").empty()) {
+    res.setHeader("Content-Type", "text/plain");
+  }
   std::string strRes = res.formatResponse();
   // std::cout << "___________________________" << std::endl;
   // std::cout << strRes; 

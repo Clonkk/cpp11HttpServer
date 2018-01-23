@@ -7,8 +7,8 @@ volatile bool goOn = true;
 void sighandler(int theSignal) {
   goOn = false;
 }
-// const char* const IP = "192.168.1.12";
-const char* const IP = "127.0.0.1"; 
+const char* const IP = "192.168.1.12";
+// const char* const IP = "127.0.0.1"; 
 const uint16_t PORT = 10175;
 
 std::string echoWs(const std::string& msg) {

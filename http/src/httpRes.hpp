@@ -41,6 +41,7 @@ class httpRes {
     void handleWsResponse(httpReq& req);
     // Calculate hash function of handshake
     std::string calculateHandshake(const std::string& key);
+    std::string header(const std::string& h);
   private:
     // Attribute of response
     http::Code httpCode;

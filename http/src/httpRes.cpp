@@ -87,3 +87,10 @@ std::string httpRes::formatResponse() {
   }
   return str;
 }
+std::string httpRes::header(const std::string& h) {
+  try {
+    return resHeader.at(h);
+  } catch(std::out_of_range &e) {
+    return std::string("");
+  }
+}

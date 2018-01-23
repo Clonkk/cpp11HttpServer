@@ -25,8 +25,10 @@
 #include "httpReq.hpp"
 #include "httpRes.hpp"
 #include <cstring>
-void defaultHttpServerFunction(Socket*) {}
 #include <vector>
+
+void defaultHttpServerFunction(Socket*) {}
+
 httpServer::httpServer(uint16_t port, const char* ip):Server(port, ip) {
 }
 httpServer::httpServer(const Inet& inet) : Server(inet) {
@@ -43,8 +45,7 @@ void httpServer::requestHandler(Socket* s) {
   int length;
   length = socket->recv(buffer, 4096);
   if(length > 0) {
-    std::string strReq;
-    strReq.assign(buffer, length);
+    std::string strReq(buffer, length);
     if(socket->isWebSocket()==false) {
       httpRequestHandler(socket, strReq);
     } else {//if(socket->isWebSocket == true) 
@@ -90,10 +91,6 @@ void httpServer::httpRequestHandler(httpSock* socket, const std::string& strReq)
       webSocketMap.emplace(req.header("Ressource"), socket->sockInet);
     } else {
       res.setHeader("Content-Length", std::to_string(req.getBody().size()));
-      // This should be configured elsewhere probably...
-      // Maybe redo the origin filtering in httpSock using CORS instead
-      res.setHeader(std::string("Access-Control-Allow-Origin"),std::string("*"));
-      res.setHeader("Content-Type", "text/plain");
       if(req.header("Connection")=="keep-alive") {
         res.addHeader("Connection", req.header("Connection"));
       }

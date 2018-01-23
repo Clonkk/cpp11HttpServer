@@ -74,10 +74,10 @@ std::queue<std::string> httpReq::parameter(const std::string h) {
 //
 http::Code httpReq::process(const std::string& buffer) {
   http::Code result = http::OK;
-  // size_t length = buffer.size();
   size_t endHeader = buffer.find(endOf);
   if(endHeader ==  std::string::npos) {
     result = http::BAD_REQUEST;
+    return result;
   }
   result = processHeader(buffer.substr(0, endHeader));
   body = buffer.substr(endHeader+endOf.size());

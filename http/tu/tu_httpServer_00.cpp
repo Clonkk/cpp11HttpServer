@@ -11,6 +11,7 @@ const char* const IP = "192.168.1.12";
 const uint16_t PORT = 10175;
 void printFunc(httpReq& req, httpRes& res) {
   req.print();
+  res.setHeader(std::string("Access-Control-Allow-Origin"),std::string("*"));
 }
 void echoFunc(httpReq& req, httpRes& res) {
   auto params = req.parameter("msg");
